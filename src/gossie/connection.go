@@ -237,7 +237,8 @@ func (cp *connectionPool) runWithRetries(t transaction, retries int) error {
 			c, err = cp.acquire()
 			// nothing to do, cannot acquire a connection
 			if err != nil {
-				return err
+				// want to try on a different node
+				continue
 			}
 		}
 
