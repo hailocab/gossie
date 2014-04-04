@@ -353,7 +353,7 @@ func (cp *connectionPool) acquire() (*connection, error) {
 					cp.blacklist(node)
 					return nil, err
 				}
-			case thrift.NewTTransportException:
+			case thrift.TTransportException:
 				// bad connection
 				log.Warnf("MODDIE - 13: Bad connection: %s", node)
 				cp.blacklist(node)
