@@ -9,10 +9,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
-
-	log "github.com/cihub/seelog"
 )
 
 /*
@@ -238,9 +235,8 @@ func (cp *connectionPool) runWithRetries(t transaction, retries int) error {
 		// acquire a new connection if we are just starting out or after discarding one
 		if c == nil {
 			c, err = cp.acquire()
-			// nothing to do, cannot acquire a connection
+			// cannot acquire a connection, try another node
 			if err != nil {
-				log.Warnf("MODDIE - 1: Try %d, Failed to aquire connection: %v", tries+1, err)
 				continue
 			}
 		}
@@ -252,13 +248,11 @@ func (cp *connectionPool) runWithRetries(t transaction, retries int) error {
 			c.close()
 			c = nil
 			cp.releaseEmpty()
-			log.Warnf("MODDIE - 2: Try %d, Thrift transport exception: %v", tries+1, terr.err)
 			continue
 		}
 		// nonrecoverable error, but not related to availability, do not retry and pass it to the user
 		if terr.ire != nil {
 			cp.release(c)
-			log.Warnf("MODDIE - 3: Try %d, Non recoverable error: %v", tries+1, terr.ire)
 			return terr
 		}
 		// the node is timing out. This Is Bad. move it to the blacklist and try again with another connection
@@ -266,7 +260,6 @@ func (cp *connectionPool) runWithRetries(t transaction, retries int) error {
 			cp.blacklist(c.node)
 			c.close()
 			c = nil
-			log.Warnf("MODDIE - 4: Try %d, Node timeing out, node blacklisted so going to retry", tries+1)
 			continue
 		}
 		// one or more replicas are unavailable for the operation at the required consistency level. this is potentially
@@ -274,7 +267,6 @@ func (cp *connectionPool) runWithRetries(t transaction, retries int) error {
 		if terr.ue != nil {
 			cp.release(c)
 			c = nil
-			log.Warn("MODDIE - 5: Try %d, Replica unavailable, retrying", tries+1)
 			continue
 		}
 		// no errors, release connection and return
@@ -283,7 +275,6 @@ func (cp *connectionPool) runWithRetries(t transaction, retries int) error {
 	}
 
 	// loop exited normally so it hit the retry limit
-	log.Warn("MODDIE - 6: Max retries reached")
 	return ErrorMaxRetriesReached
 }
 
@@ -320,47 +311,22 @@ func (cp *connectionPool) acquire() (*connection, error) {
 
 	if s.conn == nil {
 		node, err := cp.randomNode(now)
-		log.Warnf("MODDIE - 7: Attempting to connect to node: %s", node)
 		if err != nil {
 			cp.releaseEmpty()
 			return nil, err
 		}
 		c, err = newConnection(node, cp.keyspace, cp.options.Timeout, cp.options.Authentication)
 		if err == ErrorConnectionTimeout {
-			log.Warnf("MODDIE - 8: Timeout connecting to node (blacklisting): %s", node)
 			cp.blacklist(node)
 			return nil, err
 		}
 		if err != nil {
-			// detect known errors
-			switch t := err.(type) {
-			case *net.OpError:
-				if t.Op == "dial" {
-					// unknown host
-					log.Warnf("MODDIE - 10: Unknown host: %s", node)
-					cp.blacklist(node)
-					return nil, err
-				} else if t.Op == "read" {
-					// connection refused
-					log.Warnf("MODDIE - 11: Connection refused: %s", node)
-					cp.blacklist(node)
-					return nil, err
-				}
-			case syscall.Errno:
-				if t == syscall.ECONNREFUSED {
-					// connection refused
-					log.Warnf("MODDIE - 12: Connection refused: %s", node)
-					cp.blacklist(node)
-					return nil, err
-				}
-			case thrift.TTransportException:
-				// bad connection
-				log.Warnf("MODDIE - 13: Bad connection: %s", node)
+			if _, ok := err.(thrift.TTransportException); ok {
 				cp.blacklist(node)
-				return nil, err
+			} else {
+				cp.releaseEmpty()
 			}
-			log.Warnf("MODDIE - 9: Error connecting to node (releaseEmpty): %s %v", node, err)
-			cp.releaseEmpty()
+
 			return nil, err
 		}
 	} else {
@@ -379,7 +345,6 @@ func (cp *connectionPool) releaseEmpty() {
 }
 
 func (cp *connectionPool) blacklist(badNode string) {
-	log.Warnf("MODDIE - 9: Blacklisting %s", badNode)
 	n := len(cp.nodes)
 	for i := 0; i < n; i++ {
 		node := cp.nodes[i]
@@ -449,7 +414,6 @@ type connection struct {
 }
 
 func newConnection(node, keyspace string, timeout int, authentication map[string]string) (*connection, error) {
-
 	addr, err := net.ResolveTCPAddr("tcp", node)
 	if err != nil {
 		return nil, err
