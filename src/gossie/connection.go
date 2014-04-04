@@ -235,9 +235,9 @@ func (cp *connectionPool) runWithRetries(t transaction, retries int) error {
 		// acquire a new connection if we are just starting out or after discarding one
 		if c == nil {
 			c, err = cp.acquire()
-			// nothing to do, cannot acquire a connection
+			// cannot acquire a connection, try another node
 			if err != nil {
-				return err
+				continue
 			}
 		}
 
@@ -248,7 +248,7 @@ func (cp *connectionPool) runWithRetries(t transaction, retries int) error {
 			c.close()
 			c = nil
 			cp.releaseEmpty()
-			return terr
+			continue
 		}
 		// nonrecoverable error, but not related to availability, do not retry and pass it to the user
 		if terr.ire != nil {
@@ -321,7 +321,12 @@ func (cp *connectionPool) acquire() (*connection, error) {
 			return nil, err
 		}
 		if err != nil {
-			cp.releaseEmpty()
+			if _, ok := err.(thrift.TTransportException); ok {
+				cp.blacklist(node)
+			} else {
+				cp.releaseEmpty()
+			}
+
 			return nil, err
 		}
 	} else {
@@ -409,7 +414,6 @@ type connection struct {
 }
 
 func newConnection(node, keyspace string, timeout int, authentication map[string]string) (*connection, error) {
-
 	addr, err := net.ResolveTCPAddr("tcp", node)
 	if err != nil {
 		return nil, err
