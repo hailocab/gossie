@@ -240,7 +240,7 @@ func (cp *connectionPool) runWithRetries(t transaction, retries int) error {
 			// nothing to do, cannot acquire a connection
 			if err != nil {
 				log.Warnf("MODDIE - 1: Try %d, Failed to aquire connection: %v", tries+1, err)
-				return err
+				continue
 			}
 		}
 
@@ -252,7 +252,7 @@ func (cp *connectionPool) runWithRetries(t transaction, retries int) error {
 			c = nil
 			cp.releaseEmpty()
 			log.Warnf("MODDIE - 2: Try %d, Thrift transport exception: %v", tries+1, terr.err)
-			return terr
+			continue
 		}
 		// nonrecoverable error, but not related to availability, do not retry and pass it to the user
 		if terr.ire != nil {
