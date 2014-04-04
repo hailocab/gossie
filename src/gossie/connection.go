@@ -319,12 +319,14 @@ func (cp *connectionPool) acquire() (*connection, error) {
 
 	if s.conn == nil {
 		node, err := cp.randomNode(now)
+		log.Warnf("MODDIE - 7: Attempting to connect to node: %s", node)
 		if err != nil {
 			cp.releaseEmpty()
 			return nil, err
 		}
 		c, err = newConnection(node, cp.keyspace, cp.options.Timeout, cp.options.Authentication)
 		if err == ErrorConnectionTimeout {
+			log.Warnf("MODDIE - 8: Timeout connecting to node (blacklisting): %s", node)
 			cp.blacklist(node)
 			return nil, err
 		}
@@ -348,6 +350,7 @@ func (cp *connectionPool) releaseEmpty() {
 }
 
 func (cp *connectionPool) blacklist(badNode string) {
+	log.Warnf("MODDIE - 9: Blacklisting %s", badNode)
 	n := len(cp.nodes)
 	for i := 0; i < n; i++ {
 		node := cp.nodes[i]
