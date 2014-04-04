@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	log "github.com/cihub/seelog"
 )
 
 /*
@@ -237,6 +239,7 @@ func (cp *connectionPool) runWithRetries(t transaction, retries int) error {
 			c, err = cp.acquire()
 			// cannot acquire a connection, try another node
 			if err != nil {
+				log.Warnf("MODDIE Failed to acquire: %v", err)
 				continue
 			}
 		}
@@ -248,11 +251,13 @@ func (cp *connectionPool) runWithRetries(t transaction, retries int) error {
 			c.close()
 			c = nil
 			cp.releaseEmpty()
+			log.Warnf("MODDIE Error bubble from thrift: %v", terr.err)
 			return terr
 		}
 		// nonrecoverable error, but not related to availability, do not retry and pass it to the user
 		if terr.ire != nil {
 			cp.release(c)
+			log.Warnf("MODDIE Error bubble from thrift: %v", terr.ire)
 			return terr
 		}
 		// the node is timing out. This Is Bad. move it to the blacklist and try again with another connection
@@ -260,6 +265,7 @@ func (cp *connectionPool) runWithRetries(t transaction, retries int) error {
 			cp.blacklist(c.node)
 			c.close()
 			c = nil
+			log.Warnf("MODDIE Node timing out: %v", terr.te)
 			continue
 		}
 		// one or more replicas are unavailable for the operation at the required consistency level. this is potentially
@@ -267,6 +273,7 @@ func (cp *connectionPool) runWithRetries(t transaction, retries int) error {
 		if terr.ue != nil {
 			cp.release(c)
 			c = nil
+			log.Warnf("MODDIE Replicas unavailable: %v", terr.ue)
 			continue
 		}
 		// no errors, release connection and return
@@ -275,6 +282,7 @@ func (cp *connectionPool) runWithRetries(t transaction, retries int) error {
 	}
 
 	// loop exited normally so it hit the retry limit
+	log.Warn("MODDIE Max retries")
 	return ErrorMaxRetriesReached
 }
 
@@ -345,6 +353,7 @@ func (cp *connectionPool) releaseEmpty() {
 }
 
 func (cp *connectionPool) blacklist(badNode string) {
+	log.Warnf("Blacklisting %v", badNode)
 	n := len(cp.nodes)
 	for i := 0; i < n; i++ {
 		node := cp.nodes[i]
