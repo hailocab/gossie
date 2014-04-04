@@ -248,7 +248,7 @@ func (cp *connectionPool) runWithRetries(t transaction, retries int) error {
 				c.close()
 				c = nil
 				cp.releaseEmpty()
-				return terr
+				continue
 			}
 		}
 
@@ -304,7 +304,12 @@ func (cp *connectionPool) acquire() (*connection, error) {
 			return nil, err
 		}
 		if err != nil {
-			cp.releaseEmpty()
+			if _, ok := err.(thrift.TTransportException); ok {
+				cp.blacklist(node)
+			} else {
+				cp.releaseEmpty()
+			}
+
 			return nil, err
 		}
 	} else {
@@ -392,7 +397,6 @@ type connection struct {
 }
 
 func newConnection(node, keyspace string, timeout int, authentication map[string]string) (*connection, error) {
-
 	addr, err := net.ResolveTCPAddr("tcp", node)
 	if err != nil {
 		return nil, err
