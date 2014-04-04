@@ -331,6 +331,7 @@ func (cp *connectionPool) acquire() (*connection, error) {
 			return nil, err
 		}
 		if err != nil {
+			log.Warnf("MODDIE - 9: Error connecting to node (releaseEmpty): %s %v", node, err)
 			cp.releaseEmpty()
 			return nil, err
 		}
