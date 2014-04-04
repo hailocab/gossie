@@ -9,6 +9,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	log "github.com/cihub/seelog"
@@ -331,6 +332,28 @@ func (cp *connectionPool) acquire() (*connection, error) {
 			return nil, err
 		}
 		if err != nil {
+			// detect known errors
+			switch t := err.(type) {
+			case *net.OpError:
+				if t.Op == "dial" {
+					// unknown host
+					log.Warnf("MODDIE - 10: Unknown host: %s", node)
+					cp.blacklist(node)
+					return nil, err
+				} else if t.Op == "read" {
+					// connection refused
+					log.Warnf("MODDIE - 11: Connection refused: %s", node)
+					cp.blacklist(node)
+					return nil, err
+				}
+			case syscall.Errno:
+				if t == syscall.ECONNREFUSED {
+					// connection refused
+					log.Warnf("MODDIE - 12: Connection refused: %s", node)
+					cp.blacklist(node)
+					return nil, err
+				}
+			}
 			log.Warnf("MODDIE - 9: Error connecting to node (releaseEmpty): %s %v", node, err)
 			cp.releaseEmpty()
 			return nil, err
