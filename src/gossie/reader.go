@@ -184,7 +184,9 @@ func sliceToCassandra(slice *Slice) *cassandra.SliceRange {
 	sr := cassandra.NewSliceRange()
 	sr.Start = slice.Start
 	sr.Finish = slice.End
-	sr.Count = int32(slice.Count)
+	if slice.Count != 0 {
+		sr.Count = int32(slice.Count)
+	}
 	sr.Reversed = slice.Reversed
 	// workaround some uninitialized slice == nil quirks that trickle down into the generated thrift4go code
 	if sr.Start == nil {
