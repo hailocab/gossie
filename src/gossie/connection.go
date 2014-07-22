@@ -219,8 +219,14 @@ func (cp *connectionPool) runWithRetries(t transaction, retries int) error {
 		if c == nil {
 			c, err = cp.acquire()
 			// nothing to do, cannot acquire a connection
+			// Catch and return some specific nonrecoverable errors, otherwise continue to reattempt
 			if err != nil {
-				continue
+				switch err {
+				case ErrorAuthenticationFailed, ErrorAuthorizationFailed:
+					return err
+				default:
+					continue
+				}
 			}
 		}
 
