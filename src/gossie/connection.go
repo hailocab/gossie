@@ -285,7 +285,9 @@ func (cp *connectionPool) randomNode(now int) (string, error) {
 
 func (cp *connectionPool) acquire() (*connection, error) {
 	var c *connection
+	beforeAcquire := time.Now()
 	s := <-cp.available
+	fmt.Println("Time spent acquiring C* connection: ", time.Now().Sub(beforeAcquire))
 
 	now := int(time.Now().Unix())
 	if s.lastUsage+cp.options.Recycle+(rand.Int()%cp.options.RecycleJitter) < now {
