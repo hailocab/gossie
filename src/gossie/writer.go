@@ -86,7 +86,7 @@ func (w *writer) InsertTtl(cf string, row *Row, ttl int) Writer {
 		tm := w.addWriter(cf, row.Key)
 		c := cassandra.NewColumn()
 		c.Name = col.Name
-		c.Value = &col.Value
+		c.Value = col.Value
 		if ttl > 0 {
 			ttlTmp := int32(ttl)
 			c.Ttl = &ttlTmp
@@ -140,7 +140,7 @@ func (w *writer) DeleteColumns(cf string, key []byte, columns [][]byte) Writer {
 	for i, name := range columns {
 		colNamesArr[i] = name
 	}
-	sp.ColumnNames = &colNamesArr
+	sp.ColumnNames = colNamesArr
 	d.Predicate = sp
 	tm.Deletion = d
 	return w

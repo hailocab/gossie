@@ -215,7 +215,7 @@ func (r *reader) buildPredicate() *cassandra.SlicePredicate {
 		for _, col := range r.columns {
 			colArr = append(colArr, col)
 		}
-		sp.ColumnNames = &colArr
+		sp.ColumnNames = colArr
 	} else if r.setSlice {
 		sp.SliceRange = sliceToCassandra(&r.slice)
 	} else {
@@ -233,20 +233,20 @@ func (r *reader) buildColumnParent() *cassandra.ColumnParent {
 func (q *reader) buildKeyRange(r *Range) *cassandra.KeyRange {
 	kr := cassandra.NewKeyRange()
 	if r.Start != nil {
-		kr.StartKey = &r.Start
+		kr.StartKey = r.Start
 	}
 	if r.End != nil {
-		kr.EndKey = &r.End
+		kr.EndKey = r.End
 	}
 	kr.Count = int32(r.Count)
 	// workaround some uninitialized slice == nil quirks that trickle down into the generated thrift4go code
 	if kr.StartKey == nil {
 		sKeyArr := make([]byte, 0)
-		kr.StartKey = &sKeyArr
+		kr.StartKey = sKeyArr
 	}
 	if kr.EndKey == nil {
 		eKeyArr := make([]byte, 0)
-		kr.EndKey = &eKeyArr
+		kr.EndKey = eKeyArr
 	}
 	return kr
 }
@@ -442,7 +442,7 @@ func rowFromTListColumns(key []byte, tl []*cassandra.ColumnOrSuperColumn) *Row {
 		if col.Column != nil {
 			c := &Column{Name: col.Column.Name}
 			if col.Column.IsSetValue() {
-				c.Value = *col.Column.Value
+				c.Value = col.Column.Value
 			}
 			if col.Column.IsSetTimestamp() {
 				c.Timestamp = *col.Column.Timestamp

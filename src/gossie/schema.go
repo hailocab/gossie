@@ -35,19 +35,19 @@ func newSchema(ksDef *cassandra.KsDef) *Schema {
 			continue
 		}
 
-		if *cfDef.ColumnType != "Standard" {
+		if cfDef.ColumnType != "Standard" {
 			continue
 		}
 
 		cf := &ColumnFamily{}
 
-		cf.DefaultComparator = parseTypeClass(*cfDef.ComparatorType)
+		cf.DefaultComparator = parseTypeClass(cfDef.ComparatorType)
 		cf.DefaultValidator = parseTypeClass(*cfDef.DefaultValidationClass)
 		cf.KeyValidator = parseTypeClass(*cfDef.KeyValidationClass)
 
 		cf.NamedColumns = make(map[string]TypeClass)
 
-		for _, colDef := range *cfDef.ColumnMetadata {
+		for _, colDef := range cfDef.ColumnMetadata {
 			// FIXME: this is weird, but happens a lot. thrift4go problem?
 			if colDef == nil {
 				continue
