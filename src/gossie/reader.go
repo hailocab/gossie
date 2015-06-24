@@ -2,7 +2,9 @@ package gossie
 
 import (
 	"errors"
+	"fmt"
 	"github.com/hailocab/gossie/src/cassandra"
+	"time"
 )
 
 /*
@@ -266,14 +268,18 @@ func (r *reader) Get(key []byte) (*Row, error) {
 		return nil, errors.New("No column family specified")
 	}
 
+	beforeBuild := time.Now()
 	cp := r.buildColumnParent()
 	sp := r.buildPredicate()
+	fmt.Println("Time spent building query: ", time.Now().Sub(beforeBuild))
 
 	var ret []*cassandra.ColumnOrSuperColumn
 	err := r.pool.run(func(c *connection) *transactionError {
 		var err error
+		beforeGetSlice := time.Now()
 		ret, err = c.client.GetSlice(
 			key, cp, sp, cassandra.ConsistencyLevel(r.consistencyLevel))
+		fmt.Println("Time spent on GetSlice: ", time.Now().Sub(beforeGetSlice))
 		return &transactionError{err}
 	})
 
@@ -281,7 +287,11 @@ func (r *reader) Get(key []byte) (*Row, error) {
 		return nil, err
 	}
 
-	return rowFromTListColumns(key, ret), nil
+	beforeRowFromTListColumns := time.Now()
+	result := rowFromTListColumns(key, ret)
+	fmt.Println("Time spent on rowFromTListColumns: ", time.Now().Sub(beforeRowFromTListColumns))
+
+	return result, nil
 }
 
 func (r *reader) Count(key []byte) (int, error) {
