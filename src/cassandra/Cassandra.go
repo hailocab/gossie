@@ -6,6 +6,7 @@ package cassandra
 import (
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
+	"time"
 )
 
 // (needed to ensure safety because of naive import list construction.)
@@ -497,10 +498,15 @@ func (p *CassandraClient) recvGet() (value *ColumnOrSuperColumn, err error) {
 //  - Predicate
 //  - ConsistencyLevel
 func (p *CassandraClient) GetSlice(key []byte, column_parent *ColumnParent, predicate *SlicePredicate, consistency_level ConsistencyLevel) (r []*ColumnOrSuperColumn, err error) {
+	beforeSendGetSlice := time.Now()
 	if err = p.sendGetSlice(key, column_parent, predicate, consistency_level); err != nil {
 		return
 	}
-	return p.recvGetSlice()
+	fmt.Println("Time spent on sendGetSlice: ", time.Now().Sub(beforeSendGetSlice))
+	beforeRecvGetSlice := time.Now()
+	result, err := p.recvGetSlice()
+	fmt.Println("Time spent on recvGetSlice: ", time.Now().Sub(beforeRecvGetSlice))
+	return result, err
 }
 
 func (p *CassandraClient) sendGetSlice(key []byte, column_parent *ColumnParent, predicate *SlicePredicate, consistency_level ConsistencyLevel) (err error) {
