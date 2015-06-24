@@ -305,12 +305,19 @@ func (cp *connectionPool) acquire() (*connection, error) {
 	}
 
 	if s.conn == nil {
+		beforeNewNode := time.Now()
 		node, err := cp.randomNode(now)
 		if err != nil {
+			fmt.Println("Error fetching new C* node: ", err.Error())
 			cp.releaseEmpty()
 			return nil, err
 		}
+		fmt.Println("Time spent acquiring C* node: ", time.Now().Sub(beforeNewNode))
+		beforeConnection := time.Now()
 		c, err = newConnection(node, cp.keyspace, cp.options.Timeout, cp.options.Authentication)
+		if err != nil {
+			fmt.Println("Error connecting to C*: ", err.Error())
+		}
 		if err == ErrorConnectionTimeout {
 			cp.blacklist(node)
 			return nil, err
@@ -324,6 +331,7 @@ func (cp *connectionPool) acquire() (*connection, error) {
 
 			return nil, err
 		}
+		fmt.Println("Time spent connecting to C*: ", time.Now().Sub(beforeConnection))
 	} else {
 		c = s.conn
 	}
