@@ -539,20 +539,26 @@ func (p *CassandraClient) recvGetSlice() (value []*ColumnOrSuperColumn, err erro
 		iprot = p.ProtocolFactory.GetProtocol(p.Transport)
 		p.InputProtocol = iprot
 	}
+	before1 := time.Now()
 	_, mTypeId, seqId, err := iprot.ReadMessageBegin()
+	fmt.Println("Time spent on ReadMessageBegin: ", time.Now().Sub(before1))
 	if err != nil {
 		return
 	}
 	if mTypeId == thrift.EXCEPTION {
 		error40 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
 		var error41 error
+		before2 := time.Now()
 		error41, err = error40.Read(iprot)
+		fmt.Println("Time spent on Read: ", time.Now().Sub(before2))
 		if err != nil {
 			return
 		}
+		before3 := time.Now()
 		if err = iprot.ReadMessageEnd(); err != nil {
 			return
 		}
+		fmt.Println("Time spent on ReadMessageEnd: ", time.Now().Sub(before3))
 		err = error41
 		return
 	}
@@ -561,12 +567,16 @@ func (p *CassandraClient) recvGetSlice() (value []*ColumnOrSuperColumn, err erro
 		return
 	}
 	result39 := NewGetSliceResult()
+	before4 := time.Now()
 	if err = result39.Read(iprot); err != nil {
 		return
 	}
+	fmt.Println("Time spent on Read2: ", time.Now().Sub(before4))
+	before5 := time.Now()
 	if err = iprot.ReadMessageEnd(); err != nil {
 		return
 	}
+	fmt.Println("Time spent on ReadMessageEnd2: ", time.Now().Sub(before5))
 	if result39.Ire != nil {
 		err = result39.Ire
 		return
