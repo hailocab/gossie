@@ -230,7 +230,11 @@ func (cp *connectionPool) runWithRetries(t transaction, retries int) error {
 			}
 		}
 
+		beforeTransaction := time.Now()
 		terr := t(c)
+		fmt.Println("Time spent executing transaction: ", time.Now().Sub(beforeTransaction))
+		afterTransaction := time.Now()
+		defer fmt.Println("Time spent releasing connection: ", time.Now().Sub(afterTransaction))
 		if terr.err != nil {
 			switch terr.err.(type) {
 			case *cassandra.InvalidRequestException:
