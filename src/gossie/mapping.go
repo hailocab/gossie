@@ -293,7 +293,7 @@ func (m *sparseMapping) Map(source interface{}) (*Row, error) {
 			cp = append(cp, composite...)
 			cp = append(cp, packComposite(columnName, eocEquals)...)
 		} else {
-			cp = columName
+			cp = columnName
 		}
 		columnValue, err := f.marshalValue(v)
 		if err != nil {
