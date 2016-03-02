@@ -282,14 +282,24 @@ func (m *sparseMapping) Map(source interface{}) (*Row, error) {
 		if err != nil {
 			return nil, err
 		}
+		totalLen := len(columnName)
 		if len(composite) > 0 {
-			columnName = append(composite, packComposite(columnName, eocEquals)...)
+			// composite columns uses one byte for the separator
+			// and two for storing the size of the data
+			totalLen += len(composite) + 3
+		}
+		cp := make([]byte, 0, totalLen)
+		if len(composite) > 0 {
+			cp = append(cp, composite...)
+			cp = append(cp, packComposite(columnName, eocEquals)...)
+		} else {
+			cp = append(cp, columnName...)
 		}
 		columnValue, err := f.marshalValue(v)
 		if err != nil {
 			return nil, err
 		}
-		row.Columns = append(row.Columns, &Column{Name: columnName, Value: columnValue})
+		row.Columns = append(row.Columns, &Column{Name: cp, Value: columnValue})
 	}
 
 	return row, nil
